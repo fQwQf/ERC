@@ -1,0 +1,35 @@
+{
+  "datasets": {
+    "empathetic_dialogues": {
+      "source": "HuggingFace (empathetic_dialogues)",
+      "description": "EmpatheticDialogues dataset with 32 emotion categories",
+      "files": [
+        "train.json",
+        "validation.json",
+        "test.json"
+      ],
+      "url": "https://huggingface.co/datasets/empathetic_dialogues"
+    },
+    "goemotions": {
+      "source": "HuggingFace (go_emotions)",
+      "description": "GoEmotions dataset with 27 emotion categories",
+      "files": [
+        "train.json",
+        "validation.json",
+        "test.json"
+      ],
+      "url": "https://huggingface.co/datasets/go_emotions"
+    },
+    "emorynlp": {
+      "source": "GitHub (emorynlp/emotion-detection)",
+      "description": "EmoryNLP emotion detection dataset",
+      "files": [
+        "emotion-detection-trn.json",
+        "emotion-detection-dev.json",
+        "emotion-detection-tst.json"
+      ],
+      "url": "https://github.com/emorynlp/emotion-detection"
+    }
+  },
+  "note": "All datasets are mapped to a unified 28-class emotion taxonomy"
+}
