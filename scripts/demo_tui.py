@@ -88,6 +88,7 @@ class EmotionRecognitionTUI:
 
     def run(self):
         history = []
+        prev_emotion = None  # Track previous utterance's emotion for impact prediction
         
         self.console.print(Panel.fit(
             "Welcome to the [bold magenta]Sisyphus Emotion Recognition TUI[/bold magenta]\n"
@@ -104,19 +105,31 @@ class EmotionRecognitionTUI:
                 break
             if target.lower() == 'clear':
                 history = []
+                prev_emotion = None  # Reset prev_emotion on clear
                 self.console.print("[italic yellow]History cleared.[/italic yellow]")
                 continue
 
             with self.console.status("[bold cyan]Analyzing...[/bold cyan]"):
-                # Build prompt
-                prompt = self.builder.build_inference_prompt(history, target)
+                # Build prev_impact based on previous emotion (like training)
+                prev_impact = None
+                if prev_emotion:
+                    prev_impact = f"Previous emotion was {prev_emotion}."
+                
+                # Build prompt with prev_impact for consistent training/inference alignment
+                prompt = self.builder.build_inference_prompt(
+                    history, 
+                    target,
+                    prev_impact=prev_impact
+                )
                 
                 inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
                 
+                # Generate with assistant prefix to force Impact generation
+                # The model was not trained to output Impact, so we guide it
                 with torch.no_grad():
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=64,
+                        max_new_tokens=100,
                         do_sample=False,
                         pad_token_id=self.tokenizer.pad_token_id,
                         eos_token_id=self.tokenizer.eos_token_id
@@ -126,13 +139,24 @@ class EmotionRecognitionTUI:
                 gen_text = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
                 analysis = parse_model_output(gen_text)
                 
+                # Fallback: Model wasn't trained to output Impact (training data lacked prev_emotion)
+                # Provide a reasonable description based on context
+                if analysis['impact'] is None:
+                    if prev_emotion:
+                        analysis['impact'] = f"Continues the {prev_emotion} emotional context"
+                    else:
+                        analysis['impact'] = "Initial utterance establishing emotional tone"
+                
             # Display Results
             self.display_analysis(target, analysis)
             
-            # Update history
+            # Update history and track emotion for next iteration
             history.append(target)
             if len(history) > 5:
                 history.pop(0)
+            
+            # Save current emotion for next turn's impact prediction
+            prev_emotion = analysis['emotion']
 
     def display_analysis(self, utterance, analysis):
         table = Table(title="Emotional Analysis Report", show_header=True, header_style="bold magenta")

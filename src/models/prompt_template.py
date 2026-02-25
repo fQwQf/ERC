@@ -58,9 +58,15 @@ Analysis:
     def format_query(
         dialogue_history: List[str],
         target_utterance: str,
+        prev_impact: Optional[str] = None,
     ) -> str:
         """Format the query (input to be predicted)"""
         history_str = PromptTemplate.format_dialogue_history(dialogue_history)
+        
+        # If prev_impact is provided, add it to the dialogue history as context
+        # This helps the model understand the emotional context of the conversation
+        if prev_impact:
+            history_str += f"\n\n[Context: {prev_impact}]"
         
         return f"""Now analyze this dialogue:
 
@@ -80,6 +86,7 @@ Provide your analysis in the following format:
         target_utterance: str,
         demonstrations: Optional[List[dict]] = None,
         include_system: bool = True,
+        prev_impact: Optional[str] = None,
     ) -> str:
         """Build complete prompt with optional demonstrations"""
         parts = []
@@ -105,7 +112,7 @@ Provide your analysis in the following format:
                 parts.append(f"<|im_start|>user\nHere are some examples:\n\n" + "\n\n".join(demo_parts) + "<|im_end|>")
         
         # Query
-        query = self.format_query(dialogue_history, target_utterance)
+        query = self.format_query(dialogue_history, target_utterance, prev_impact)
         parts.append(f"<|im_start|>user\n{query}<|im_end|>")
         
         # Assistant response start
@@ -127,12 +134,16 @@ Provide your analysis in the following format:
             dialogue_history=dialogue_history,
             target_utterance=target_utterance,
             demonstrations=demonstrations,
+            prev_impact=prev_impact,
         )
         
-        # Build target response
+        # Build target response - ALWAYS include Impact field for consistency
         response = f"- Emotion: {emotion}\n- Speaker: {speaker}"
         if prev_impact:
             response += f"\n- Impact: {prev_impact}"
+        else:
+            # For first utterance or standalone, provide a default standalone impact
+            response += "\n- Impact: This is a standalone statement without prior emotional context."
         response += "<|im_end|>"
         
         return prompt + response
@@ -151,6 +162,7 @@ class EmotionPromptBuilder:
         dialogue_history: List[str],
         target_utterance: str,
         retrieved_examples: Optional[List[dict]] = None,
+        prev_impact: Optional[str] = None,
     ) -> str:
         """Build prompt for inference"""
         demonstrations = None
@@ -161,6 +173,7 @@ class EmotionPromptBuilder:
             dialogue_history=dialogue_history,
             target_utterance=target_utterance,
             demonstrations=demonstrations,
+            prev_impact=prev_impact,
         )
     
     def build_training_prompt(
